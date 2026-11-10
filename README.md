@@ -50,3 +50,4 @@ Resposta (201):
 
 ## Ferramentas utilizadas
 - Claude: geração inicial do código e da página com mapa, que o grupo revisou, testou e modificou onde achou necessário.
+- - Leaflet e OpenStreetMap: biblioteca e imagens do mapa (gratuitos, sem chave).
