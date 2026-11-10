@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pontos turísticos do Acre</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  --acento:#1f7a52; --sobre-acento:#fff; --acento-claro:#e4f3ea; --fundo:#f4f6f5; --card:#fff;
+  --texto:#16231c; --cinza:#617068; --borda:#dde5e0; --erro:#b3261e; --sombra:0 1px 3px rgba(0,0,0,.08);
+  --codigo:#12201a; --codigo-texto:#dff3e8;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --acento:#5fc08f; --sobre-acento:#0d1a13; --acento-claro:#1d3328; --fundo:#0f1613; --card:#17211c;
+    --texto:#e6efe9; --cinza:#9fb1a7; --borda:#2a3b33; --erro:#ff8a80; --sombra:none;
+    --codigo:#0b120f;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--fundo);color:var(--texto);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.45}
+.app{display:grid;grid-template-rows:auto 1fr;height:100dvh}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 18px;background:var(--card);border-bottom:1px solid var(--borda)}
+.marca{display:flex;align-items:center;gap:10px;min-width:0}
+.marca svg{flex:none;color:var(--acento)}
+.marca strong{display:block;font-size:1.05rem;line-height:1.2}
+.marca span{display:block;font-size:.78rem;color:var(--cinza)}
+nav{display:flex;align-items:center;gap:14px}
+nav a{color:var(--cinza);text-decoration:none;font-size:.9rem}
+nav a:hover{color:var(--acento)}
+.corpo{display:grid;grid-template-columns:400px 1fr;min-height:0}
+aside{display:flex;flex-direction:column;min-height:0;background:var(--fundo);border-right:1px solid var(--borda)}
+.vista{flex:1;overflow:auto;padding:16px}
+#mapa{min-height:0;background:var(--acento-claro)}
+@media(max-width:800px){
+  .corpo{grid-template-columns:1fr;grid-template-rows:42% 1fr}
+  #mapa{order:-1}
+  aside{border-right:0;border-top:1px solid var(--borda)}
+  .marca span{display:none}
+}
+button{font:inherit;cursor:pointer;border-radius:10px;padding:8px 14px;border:1px solid var(--borda);background:var(--card);color:var(--texto)}
+button:hover{filter:brightness(.96)}
+button.principal{background:var(--acento);color:var(--sobre-acento);border-color:var(--acento);font-weight:600}
+button.perigo{color:var(--erro);border-color:var(--erro);background:transparent}
+input,textarea{width:100%;padding:10px 12px;border:1px solid var(--borda);border-radius:10px;font:inherit;background:var(--card);color:var(--texto)}
+input:focus,textarea:focus{outline:2px solid var(--acento);outline-offset:1px}
+textarea{min-height:80px;resize:vertical}
+label{display:block;font-weight:600;font-size:.85rem;margin:12px 0 4px}
+.contagem{font-size:.8rem;color:var(--cinza);margin:10px 2px 8px}
+.lista{display:grid;gap:10px}
+.ponto{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:14px;box-shadow:var(--sombra);cursor:pointer;transition:border-color .15s,transform .15s}
+.ponto:hover{transform:translateY(-1px)}
+.ponto.ativo{border-color:var(--acento);box-shadow:0 0 0 2px var(--acento-claro),var(--sombra)}
+.ponto h3{margin:0 0 6px;font-size:1rem}
+.etiqueta{display:inline-block;background:var(--acento-claro);color:var(--acento);border-radius:999px;padding:2px 10px;font-size:.75rem;font-weight:600}
+.ponto p{margin:8px 0;color:var(--cinza);font-size:.9rem}
+.coord{font-family:ui-monospace,Consolas,monospace;font-size:.75rem;color:var(--cinza)}
+.acoes{display:flex;gap:8px;margin-top:10px}
+.acoes button{padding:5px 12px;font-size:.85rem}
+.vazio{text-align:center;color:var(--cinza);padding:30px 0}
+h2{margin:0 0 6px;font-size:1.1rem}
+.dica{background:var(--acento-claro);border-radius:10px;padding:9px 12px;font-size:.85rem;margin:0 0 4px}
+.duas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.botoes{display:flex;gap:8px;margin-top:16px}
+.erro{color:var(--erro);font-size:.88rem;margin-top:10px;min-height:1.2em}
+.pedido{border-top:1px solid var(--borda);background:var(--card);padding:8px 16px;font-size:.85rem}
+.pedido summary{cursor:pointer;color:var(--cinza);font-weight:600}
+.linha-pedido{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0;font-family:ui-monospace,Consolas,monospace;font-size:.8rem}
+.status{border-radius:6px;padding:1px 8px;font-weight:700;color:#fff}
+.s-ok{background:#1f7a4d}.s-aviso{background:#b26a00}.s-erro{background:#b3261e}
+pre{margin:0 0 6px;background:var(--codigo);color:var(--codigo-texto);padding:10px;border-radius:10px;overflow:auto;font-size:.78rem;max-height:160px}
+.pin{display:block;position:relative;width:30px;height:30px;border-radius:50% 50% 50% 0;background:var(--acento);transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.pin::after{content:"";position:absolute;width:10px;height:10px;border-radius:50%;background:#fff;top:50%;left:50%;margin:-5px 0 0 -5px}
+.pin.ativo{background:#e8590c}
+.pin.escolha{background:#2563eb}
+@media (prefers-color-scheme: dark){.leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9)}}
+.popup strong{font-size:1rem}
+.popup .cidade{color:#617068;font-size:.8rem;margin-bottom:4px}
+.popup p{margin:4px 0 6px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="marca">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z"/></svg>
+      <div><strong>Pontos turísticos do Acre</strong><span>Cada belo local do nosso querido Acre</span></div>
+    </div>
+    <nav>
+      <a href="/docs">Documentação da API</a>
+      <button class="principal" id="novo">+ Novo ponto</button>
+    </nav>
+  </header>
+
+  <div class="corpo">
+    <aside>
+      <div class="vista" id="vista-lista">
+        <input id="busca" type="search" placeholder="Buscar por nome ou cidade" aria-label="Buscar">
+        <div class="contagem" id="contagem"></div>
+        <div class="lista" id="lista"></div>
+      </div>
+
+      <form class="vista" id="form" hidden novalidate>
+        <h2 id="t-form">Novo ponto turístico</h2>
+        <p class="dica">Clique no mapa ou arraste o <b>pino azul</b> para marcar o local exato.</p>
+        <label for="nome">Nome</label>
+        <input id="nome" placeholder="Ex.: Parque Zoobotânico">
+        <label for="cidade">Cidade</label>
+        <input id="cidade" placeholder="Ex.: Rio Branco">
+        <label for="descricao">Descrição</label>
+        <textarea id="descricao" placeholder="O que o lugar tem de especial?"></textarea>
+        <div class="duas">
+          <div><label for="latitude">Latitude</label><input id="latitude" type="number" step="any" placeholder="-9.9745"></div>
+          <div><label for="longitude">Longitude</label><input id="longitude" type="number" step="any" placeholder="-67.8075"></div>
+        </div>
+        <div class="botoes">
+          <button class="principal" type="submit" id="salvar">Salvar</button>
+          <button type="button" id="cancelar">Cancelar</button>
+        </div>
+        <div class="erro" id="erro" role="alert"></div>
+      </form>
+
+      <details class="pedido">
+        <summary>Último pedido enviado à API</summary>
+        <div class="linha-pedido">
+          <b id="p-metodo">—</b><span id="p-url">nenhum pedido ainda</span>
+          <span class="status" id="p-status" hidden></span>
+        </div>
+        <pre id="p-corpo">{}</pre>
+      </details>
+    </aside>
+
+    <div id="mapa" aria-label="Mapa dos pontos turísticos"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const URL_API = "/pontos";
+const $ = (id) => document.getElementById(id);
+let pontos = [], marcadores = {}, selecionado = null, editandoId = null, pin = null;
+
+// ---------- Mapa ----------
+const mapa = L.map("mapa").setView([-9.2, -70.5], 6);
+const grupo = L.layerGroup().addTo(mapa);
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19,
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+}).addTo(mapa);
+
+function icone(classe) {
+  return L.divIcon({
+    className: "", html: '<span class="pin ' + classe + '"></span>',
+    iconSize: [30, 30], iconAnchor: [15, 36], popupAnchor: [0, -34],
+  });
+}
+
+// ---------- Pedidos à API ----------
+async function pedir(metodo, url, corpo, registrar = true) {
+  const opcoes = { method: metodo, headers: {} };
+  if (corpo) {
+    opcoes.headers["Content-Type"] = "application/json";
+    opcoes.body = JSON.stringify(corpo);
+  }
+  const resposta = await fetch(url, opcoes);
+  const texto = await resposta.text();
+  let dados = null;
+  if (texto) { try { dados = JSON.parse(texto); } catch { dados = texto; } }
+  if (registrar) mostrarPedido(metodo, url, resposta.status, dados);
+  return { status: resposta.status, dados };
+}
+
+function mostrarPedido(metodo, url, status, dados) {
+  $("p-metodo").textContent = metodo;
+  $("p-url").textContent = url;
+  const e = $("p-status");
+  e.hidden = false;
+  e.textContent = status;
+  e.className = "status " + (status < 300 ? "s-ok" : status < 400 ? "s-aviso" : "s-erro");
+  $("p-corpo").textContent = dados === null ? "(resposta sem corpo)" : JSON.stringify(dados, null, 2);
+}
+
+// ---------- Lista e marcadores ----------
+function conteudoPopup(p) {
+  const d = document.createElement("div");
+  d.className = "popup";
+  const t = document.createElement("strong"); t.textContent = p.nome;
+  const c = document.createElement("div"); c.className = "cidade"; c.textContent = p.cidade;
+  const x = document.createElement("p"); x.textContent = p.descricao;
+  const a = document.createElement("a");
+  a.href = "https://www.google.com/maps?q=" + p.latitude + "," + p.longitude;
+  a.target = "_blank"; a.rel = "noopener"; a.textContent = "Abrir no Google Maps";
+  d.append(t, c, x, a);
+  return d;
+}
+
+function criarCartao(p) {
+  const art = document.createElement("article");
+  art.className = "ponto" + (p.id === selecionado ? " ativo" : "");
+  art.onclick = () => selecionar(p.id);
+
+  const h = document.createElement("h3"); h.textContent = p.nome;
+  const et = document.createElement("span"); et.className = "etiqueta"; et.textContent = p.cidade;
+  const d = document.createElement("p"); d.textContent = p.descricao;
+  const co = document.createElement("div"); co.className = "coord";
+  co.textContent = p.latitude.toFixed(5) + ", " + p.longitude.toFixed(5);
+
+  const acoes = document.createElement("div"); acoes.className = "acoes";
+  const ed = document.createElement("button"); ed.textContent = "Editar";
+  ed.onclick = (e) => { e.stopPropagation(); abrirForm(p); };
+  const ap = document.createElement("button"); ap.textContent = "Apagar"; ap.className = "perigo";
+  ap.onclick = (e) => { e.stopPropagation(); apagarPonto(p); };
+  acoes.append(ed, ap);
+
+  art.append(h, et, d, co, acoes);
+  return art;
+}
+
+function desenhar() {
+  const termo = $("busca").value.trim().toLowerCase();
+  const visiveis = pontos.filter((p) =>
+    (p.nome + " " + p.cidade).toLowerCase().includes(termo));
+
+  $("contagem").textContent = visiveis.length + " de " + pontos.length + " pontos";
+  const lista = $("lista");
+  lista.replaceChildren();
+  if (visiveis.length === 0) {
+    const v = document.createElement("div");
+    v.className = "vazio";
+    v.textContent = pontos.length === 0 ? "Nenhum ponto cadastrado ainda." : "Nenhum ponto encontrado.";
+    lista.append(v);
+  }
+  grupo.clearLayers();
+  marcadores = {};
+  visiveis.forEach((p) => {
+    lista.append(criarCartao(p));
+    const m = L.marker([p.latitude, p.longitude], {
+      icon: icone(p.id === selecionado ? "ativo" : ""),
+    }).bindPopup(() => conteudoPopup(p)).addTo(grupo);
+    m.on("click", () => selecionar(p.id, false));
+    marcadores[p.id] = m;
+  });
+}
+
+function selecionar(id, voar = true) {
+  selecionado = id;
+  desenhar();
+  const p = pontos.find((x) => x.id === id);
+  if (!p) return;
+  if (voar) mapa.flyTo([p.latitude, p.longitude], Math.max(mapa.getZoom(), 14), { duration: 0.8 });
+  if (marcadores[id]) marcadores[id].openPopup();
+}
+
+function enquadrar() {
+  if (pontos.length === 0) return;
+  mapa.fitBounds(L.latLngBounds(pontos.map((p) => [p.latitude, p.longitude])),
+    { padding: [60, 60], maxZoom: 11 });
+}
+
+async function carregar(ajustar = false) {
+  const { dados } = await pedir("GET", URL_API, null, false);
+  pontos = dados;
+  desenhar();
+  if (ajustar) enquadrar();
+}
+
+// ---------- Formulário e pino de escolha ----------
+function posicionarPin(lat, lng) {
+  if (!pin) {
+    pin = L.marker([lat, lng], { draggable: true, icon: icone("escolha"), zIndexOffset: 1000 }).addTo(mapa);
+    pin.on("dragend", () => preencherCoordenadas(pin.getLatLng().wrap()));
+  } else {
+    pin.setLatLng([lat, lng]);
+  }
+}
+function preencherCoordenadas(ll) {
+  $("latitude").value = ll.lat.toFixed(6);
+  $("longitude").value = ll.lng.toFixed(6);
+}
+function removerPin() { if (pin) { pin.remove(); pin = null; } }
+
+mapa.on("click", (e) => {
+  if ($("form").hidden) return;
+  const ll = e.latlng.wrap();
+  posicionarPin(ll.lat, ll.lng);
+  preencherCoordenadas(ll);
+});
+
+["latitude", "longitude"].forEach((id) => $(id).addEventListener("change", () => {
+  const lat = parseFloat($("latitude").value), lng = parseFloat($("longitude").value);
+  if (!isNaN(lat) && !isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+    posicionarPin(lat, lng);
+    mapa.panTo([lat, lng]);
+  }
+}));
+
+function abrirForm(p) {
+  editandoId = p ? p.id : null;
+  $("t-form").textContent = p ? "Editando o ponto #" + p.id : "Novo ponto turístico";
+  $("nome").value = p ? p.nome : "";
+  $("cidade").value = p ? p.cidade : "";
+  $("descricao").value = p ? p.descricao : "";
+  $("latitude").value = p ? p.latitude : "";
+  $("longitude").value = p ? p.longitude : "";
+  $("erro").textContent = "";
+  $("vista-lista").hidden = true;
+  $("form").hidden = false;
+  mapa.closePopup();
+  removerPin();
+  if (p) { posicionarPin(p.latitude, p.longitude); mapa.flyTo([p.latitude, p.longitude], 14); }
+  $("nome").focus();
+}
+
+function fecharForm() {
+  editandoId = null;
+  removerPin();
+  $("form").hidden = true;
+  $("vista-lista").hidden = false;
+}
+
+function numero(texto) {
+  return texto.trim() === "" ? null : Number(texto);
+}
+
+$("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const corpo = {
+    nome: $("nome").value,
+    cidade: $("cidade").value,
+    descricao: $("descricao").value,
+    latitude: numero($("latitude").value),
+    longitude: numero($("longitude").value),
+  };
+  const { status, dados } = editandoId !== null
+    ? await pedir("PUT", URL_API + "/" + editandoId, corpo)
+    : await pedir("POST", URL_API, corpo);
+
+  if (status === 400) {
+    // A validação é feita pela API (resposta 400), não pelo navegador
+    const campos = (dados.detalhes || []).map((d) => d.campo).join(", ");
+    $("erro").textContent = "A API recusou o pedido (400). Verifique: " + campos + ".";
+    return;
+  }
+  if (status === 404) {
+    $("erro").textContent = "Esse ponto não existe mais (404).";
+    carregar();
+    return;
+  }
+  fecharForm();
+  selecionado = dados.id;
+  await carregar();
+  selecionar(dados.id);
+});
+
+async function apagarPonto(p) {
+  if (!confirm('Apagar "' + p.nome + '"?')) return;
+  await pedir("DELETE", URL_API + "/" + p.id);
+  if (selecionado === p.id) selecionado = null;
+  carregar();
+}
+
+$("novo").addEventListener("click", () => abrirForm(null));
+$("cancelar").addEventListener("click", fecharForm);
+$("busca").addEventListener("input", desenhar);
+
+carregar(true);
+setTimeout(() => mapa.invalidateSize(), 100);
+</script>
+</body>
+</html>
